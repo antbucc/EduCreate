@@ -1,9 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import infoImage from '../assets/lucide_info.svg';
 import uploadIconImage from '../assets/solar_download-outline.svg';
 import analyseIcon from '../assets/pepicons-pop_reload.svg';
 
 const UploadFrame: React.FC = () => {
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+
+  const handlePDFChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setPdfFile(event.target.files[0]);
+    }
+  };
+
+  const handlePDFUpload = async () => {
+    if (pdfFile) {
+      const formData = new FormData();
+      formData.append('file', pdfFile);
+
+      try {
+        const response = await fetch('/api/upload-pdf', { // Change to your actual backend endpoint
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          console.log('PDF uploaded successfully');
+          // Handle success, e.g., notify the user, reset the state, etc.
+        } else {
+          console.error('PDF upload failed');
+          // Handle error, e.g., notify the user
+        }
+      } catch (error) {
+        console.error('Error uploading PDF:', error);
+        // Handle network error
+      }
+    } else {
+      console.error('No PDF file selected');
+      // Handle no file selected error
+    }
+  };
+
   return (
     <div style={uploadFrameStyle}>
       <h2 style={headerStyle}>Upload your resources</h2>
@@ -17,7 +53,13 @@ const UploadFrame: React.FC = () => {
             <img src={infoImage} alt="Info" style={infoIconImageStyle} />
           </div>
           <div style={uploadButtonContainerStyle}>
-            <button style={uploadButtonStyle}>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handlePDFChange}
+              style={inputStyle} // You can add custom styling or hide it with display: 'none'
+            />
+            <button style={uploadButtonStyle} onClick={handlePDFUpload}>
               Upload PDF
               <img src={uploadIconImage} alt="Upload Icon" style={iconImageStyle} />
             </button>
