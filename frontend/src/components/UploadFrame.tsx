@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import infoImage from '../assets/lucide_info.svg';
-import uploadIconImage from '../assets/solar_download-outline.svg';
 import analyseIcon from '../assets/pepicons-pop_reload.svg';
 
 interface UploadFrameProps {
@@ -10,24 +9,17 @@ interface UploadFrameProps {
 }
 
 const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialPdfFile, url: initialUrl }) => {
-  const [pdfFile, setPdfFile] = useState<File | null>(initialPdfFile);
   const [url, setUrl] = useState<string>(initialUrl);
-  const [isPdfUploaded, setIsPdfUploaded] = useState<boolean>(false);
   const [isAnalyzable, setIsAnalyzable] = useState<boolean>(false);
-  const [isPopupVisible, setIsPopupVisible] = useState<boolean>(false);
   const [urlError, setUrlError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false); // State for loading spinner
 
   useEffect(() => {
-    // Enable the "Analyze the material" button only if the PDF has been uploaded completely or a valid URL is entered
-    setIsAnalyzable(isPdfUploaded || Boolean(url && validateUrl(url)));
-  }, [isPdfUploaded, url]);
+    setIsAnalyzable(Boolean(url && validateUrl(url)));
+  }, [url]);
 
-  //const isProduction = process.env.NODE_ENV === 'production';
-//  const baseURL = isProduction ? 'https://backend-production-60c1.up.railway.app' : 'http://localhost:5002';
+  const baseURL = "https://backend-production-60c1.up.railway.app";
 
-   const baseURL = "https://backend-production-60c1.up.railway.app";
-   console.log("URL BACKEND: "+baseURL);
   const validateUrl = (url: string) => {
     const urlPattern = new RegExp(
       '^(https?:\\/\\/)' +
@@ -42,13 +34,6 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
     return !!urlPattern.test(url);
   };
 
-  const handlePDFChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setPdfFile(event.target.files[0]);
-      setIsPdfUploaded(false); // Reset the upload status until the new file is uploaded
-    }
-  };
-
   const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputUrl = event.target.value;
     setUrl(inputUrl);
@@ -61,39 +46,8 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
         setUrlError('Invalid URL format');
         setIsAnalyzable(false);
       }
-    } else if (!isPdfUploaded) {
+    } else {
       setIsAnalyzable(false);
-    }
-  };
-
-  const handlePDFUpload = async () => {
-    if (!pdfFile) {
-      console.error('No PDF file selected.');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('file', pdfFile);
-
-      const uploadResponse = await fetch(`${baseURL}/upload-pdf`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (uploadResponse.ok) {
-        const uploadResult = await uploadResponse.json();
-        console.log("Upload Result: "+uploadResult);
-        setIsPdfUploaded(true);
-        setIsPopupVisible(true);
-        setTimeout(() => setIsPopupVisible(false), 3000); // Show popup for 3 seconds
-      } else {
-        console.error('PDF upload failed:', uploadResponse.statusText);
-        setIsPdfUploaded(false);
-      }
-    } catch (error) {
-      console.error('Error uploading PDF:', error);
-      setIsPdfUploaded(false);
     }
   };
 
@@ -103,18 +57,9 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
     setIsLoading(true); // Start the loading spinner
 
     try {
-      let materialUrl = '';
-
-      if (isPdfUploaded && pdfFile) {
-        materialUrl = `${baseURL}/local-pdfs/${pdfFile.name}`;
-      } else if (url && validateUrl(url)) {
-        materialUrl = url;
-      }
-
-      const bodyString = JSON.stringify({ material: materialUrl });
+      const bodyString = JSON.stringify({ material: url });
       const analyzeUrl = `${baseURL}/analyze-material`;
-      console.log("URL DI ANALISI: "+analyzeUrl);
-      console.log("BODY: "+bodyString);
+
       const response = await fetch(analyzeUrl, {
         method: 'POST',
         headers: {
@@ -126,7 +71,7 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
       if (response.ok) {
         const result = await response.json();
         const topics = result.MainTopics.map((topicObj: { Topic: string }) => topicObj.Topic);
-        onComplete(result,topics, pdfFile, url);
+        onComplete(result, topics, null, url);
       } else {
         console.error('Material analysis failed:', response.statusText);
       }
@@ -140,28 +85,10 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
   return (
     <div style={uploadFrameStyle}>
       <h2 style={headerStyle}>Upload your resources</h2>
-      <p style={descriptionStyle}>Resources from PDF or URLs can be added</p>
+      <p style={descriptionStyle}>Resources from URLs can be added</p>
 
       <div style={uploadSectionStyle}>
-        <div style={inputContainerStyle}>
-          <div style={labelContainerStyle}>
-            <label style={labelStyle}>PDF</label>
-            <img src={infoImage} alt="Info" style={infoIconImageStyle} />
-          </div>
-          <div style={uploadButtonContainerStyle}>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={handlePDFChange}
-              style={inputStyle}
-            />
-            <button style={uploadButtonStyle} onClick={handlePDFUpload} disabled={!pdfFile}>
-              Upload PDF
-              <img src={uploadIconImage} alt="Upload Icon" style={iconImageStyle} />
-            </button>
-          </div>
-        </div>
-
+        {/* Hide PDF upload functionality */}
         <div style={urlInputContainerStyle}>
           <div style={labelContainerStyle}>
             <label style={labelStyle}>URL</label>
@@ -197,12 +124,6 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
           <img src={analyseIcon} alt="Analyse Icon" style={iconImageStyle} />
         )}
       </button>
-
-      {isPopupVisible && (
-        <div style={popupStyle}>
-          PDF uploaded successfully!
-        </div>
-      )}
     </div>
   );
 };
@@ -239,12 +160,6 @@ const uploadSectionStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '20px',
-};
-
-const inputContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
 };
 
 const urlInputContainerStyle: React.CSSProperties = {
@@ -291,28 +206,6 @@ const inputStyle: React.CSSProperties = {
   marginBottom: '20px',
 };
 
-const uploadButtonContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '15px',
-};
-
-const uploadButtonStyle: React.CSSProperties = {
-  display: 'flex',
-  padding: '15px 30px',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: '10px',
-  borderRadius: '60px',
-  border: '1px solid #01A9C2',
-  backgroundColor: '#01A9C2',
-  color: '#FFFFFF',
-  fontSize: '16px',
-  fontWeight: 600,
-  fontFamily: 'Raleway, sans-serif',
-  cursor: 'pointer',
-};
-
 const analyseButtonStyle: React.CSSProperties = {
   display: 'flex',
   padding: '15px 30px',
@@ -333,17 +226,6 @@ const analyseButtonStyle: React.CSSProperties = {
 const iconImageStyle: React.CSSProperties = {
   width: '16px',
   height: '16px',
-};
-
-const popupStyle: React.CSSProperties = {
-  position: 'fixed',
-  bottom: '20px',
-  right: '20px',
-  backgroundColor: '#01A9C2',
-  color: '#FFFFFF',
-  padding: '10px 20px',
-  borderRadius: '5px',
-  boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
 };
 
 const errorStyle: React.CSSProperties = {
