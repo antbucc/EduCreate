@@ -113,6 +113,8 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
 
       const bodyString = JSON.stringify({ material: materialUrl });
       const analyzeUrl = `${baseURL}/analyze-material`;
+      console.log("URL DI ANALISI: "+analyzeUrl);
+      console.log("BODY: "+bodyString);
       const response = await fetch(analyzeUrl, {
         method: 'POST',
         headers: {
