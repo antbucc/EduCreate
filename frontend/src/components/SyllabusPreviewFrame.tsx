@@ -74,38 +74,38 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
       const doc = new jsPDF();
 
       // Add logo
-      const logoUrl = logo;// Replace with actual logo URL or base64
-      doc.addImage(logoUrl, 'PNG', 10, 10, 50, 20);
+      const logoUrl = logo; // Replace with actual logo URL or base64
+      doc.addImage(logoUrl, 'PNG', 10, 10, 40, 15); // Adjust logo size
 
       // Add title
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
+      doc.setFontSize(16); // Reduced title font size
       doc.setTextColor(40, 44, 52);
-      doc.text(parsedSyllabus.CourseTitle, 105, 40, { align: 'center' });
+      doc.text(parsedSyllabus.CourseTitle, 105, 30, { align: 'center' });
 
       // Line break
       doc.setLineWidth(0.5);
       doc.setDrawColor(40, 44, 52);
-      doc.line(20, 45, 190, 45); // Horizontal line after title
+      doc.line(20, 35, 190, 35); // Horizontal line after title
 
       // Add Course Description
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Course Description:', 20, 60);
+      doc.setFontSize(12); // Reduced section title font size
+      doc.text('Course Description:', 20, 45);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      doc.text(parsedSyllabus.CourseDescription, 20, 70, { maxWidth: 170 });
+      doc.setFontSize(10); // Reduced description font size
+      doc.text(parsedSyllabus.CourseDescription, 20, 50, { maxWidth: 170 });
 
       // Add Learning Outcomes
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Learning Outcomes:', 20, 100);
+      doc.setFontSize(12);
+      doc.text('Learning Outcomes:', 20, 70);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       parsedSyllabus.LearningOutcomes.forEach((outcome, index) => {
-        doc.text(`${index + 1}. ${outcome}`, 20, 110 + index * 10);
+        doc.text(`${index + 1}. ${outcome}`, 20, 75 + index * 8); // Adjusted spacing for compactness
       });
 
       // New page for Course Goals and Topics
@@ -113,37 +113,37 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
 
       // Add Course Goals
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
+      doc.setFontSize(12);
       doc.text('Course Goals:', 20, 20);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       parsedSyllabus.CourseGoals.forEach((goal, index) => {
-        doc.text(`${index + 1}. ${goal}`, 20, 30 + index * 10);
+        doc.text(`${index + 1}. ${goal}`, 20, 25 + index * 8);
       });
 
       // Add Course Topics
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Course Topics:', 20, 100);
+      doc.setFontSize(12);
+      doc.text('Course Topics:', 20, 65);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       parsedSyllabus.CourseTopics.forEach((topic, index) => {
-        doc.text(`${index + 1}. ${topic.Topic}`, 20, 110 + index * 20);
-        doc.text(`Description: ${topic.Description}`, 20, 115 + index * 20, { maxWidth: 170 });
+        doc.text(`${index + 1}. ${topic.Topic}`, 20, 70 + index * 15);
+        doc.text(`Description: ${topic.Description}`, 20, 75 + index * 15, { maxWidth: 170 });
       });
 
       // Add Prerequisites
       doc.addPage();
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
+      doc.setFontSize(12);
       doc.text('Prerequisites:', 20, 20);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       parsedSyllabus.Prerequisites.forEach((prerequisite, index) => {
-        doc.text(`${index + 1}. ${prerequisite}`, 20, 30 + index * 10);
+        doc.text(`${index + 1}. ${prerequisite}`, 20, 25 + index * 8);
       });
 
       // Save the PDF
@@ -219,123 +219,6 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
                   <p>{outcome}</p>
                   <button
                     onClick={() => setEditingField(`LearningOutcome-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Course Goals */}
-        <div style={sectionContainerStyle}>
-          <h3>Course Goals</h3>
-          {parsedSyllabus.CourseGoals.map((goal, index) => (
-            <div key={index}>
-              {editingField === `CourseGoal-${index}` ? (
-                <div>
-                  <textarea
-                    value={goal}
-                    onChange={(e) => handleArrayChange('CourseGoals', index, e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p>{goal}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseGoal-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Course Topics */}
-        <div style={sectionContainerStyle}>
-          <h3>Course Topics</h3>
-          {parsedSyllabus.CourseTopics.map((topic, index) => (
-            <div key={index}>
-              {editingField === `CourseTopic-Title-${index}` ? (
-                <div>
-                  <input
-                    type="text"
-                    value={topic.Topic}
-                    onChange={(e) => handleTopicChange(index, 'Topic', e.target.value)}
-                    style={inputStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p><strong>Title:</strong> {topic.Topic}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseTopic-Title-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-
-              {editingField === `CourseTopic-Description-${index}` ? (
-                <div>
-                  <textarea
-                    value={topic.Description}
-                    onChange={(e) => handleTopicChange(index, 'Description', e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p><strong>Description:</strong> {topic.Description}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseTopic-Description-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Prerequisites */}
-        <div style={sectionContainerStyle}>
-          <h3>Prerequisites</h3>
-          {parsedSyllabus.Prerequisites.map((prerequisite, index) => (
-            <div key={index}>
-              {editingField === `Prerequisite-${index}` ? (
-                <div>
-                  <textarea
-                    value={prerequisite}
-                    onChange={(e) => handleArrayChange('Prerequisites', index, e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p>{prerequisite}</p>
-                  <button
-                    onClick={() => setEditingField(`Prerequisite-${index}`)}
                     style={editButtonStyle}
                   >
                     &#9998;
