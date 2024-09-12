@@ -151,39 +151,7 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
     }
   };
 
-  const renderEditableField = (field: keyof SyllabusData, label: string, isTextArea: boolean = false) => (
-    <div style={fieldContainerStyle}>
-      <h3>{label}</h3>
-      {editingField === field ? (
-        <div>
-          {isTextArea ? (
-            <textarea
-              value={parsedSyllabus ? (parsedSyllabus[field] as string) : ''}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              style={textareaStyle}
-            />
-          ) : (
-            <input
-              type="text"
-              value={parsedSyllabus ? (parsedSyllabus[field] as string) : ''}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              style={inputStyle}
-            />
-          )}
-          <button onClick={handleSave} style={saveButtonStyle}>
-            &#x2714; {/* Unicode check mark symbol */}
-          </button>
-        </div>
-      ) : (
-        <div>
-          <p>{parsedSyllabus ? (parsedSyllabus[field] as string) : ''}</p>
-          <button onClick={() => setEditingField(field)} style={editButtonStyle}>
-            &#9998; {/* Unicode pencil (edit) symbol */}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  
 
   if (!parsedSyllabus) {
     return <div>Loading...</div>;
@@ -193,158 +161,234 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
     <div style={mainContainerStyle}>
       <ToastContainer />
       <div style={syllabusContainerStyle}>
+    
+
         <h2>Syllabus Preview</h2>
 
-        {renderEditableField('CourseTitle', 'Course Title')}
-        {renderEditableField('CourseDescription', 'Course Description', true)}
+{/* Course Title */}
+<div style={{ marginBottom: '20px' }}> {/* Space between sections */}
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <h3 style={{ marginRight: '20px' }}>Course Title</h3> {/* Added margin between label and value */}
+    {editingField === 'CourseTitle' ? (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <input
+          type="text"
+          value={parsedSyllabus ? parsedSyllabus.CourseTitle : ''}
+          onChange={(e) => handleInputChange('CourseTitle', e.target.value)}
+          style={inputStyle}
+        />
+        <button onClick={handleSave} style={saveButtonStyle}>
+          &#x2714;
+        </button>
+      </div>
+    ) : (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ margin: 0 }}>{parsedSyllabus ? parsedSyllabus.CourseTitle : ''}</p>
+        <button
+          onClick={() => setEditingField('CourseTitle')}
+          style={smallEditButtonStyle} // Small black-and-white button
+        >
+          &#9998;
+        </button>
+      </div>
+    )}
+  </div>
+</div>
 
-        {/* Learning Outcomes */}
-        <div style={sectionContainerStyle}>
-          <h3>Learning Outcomes</h3>
-          {parsedSyllabus.LearningOutcomes.map((outcome, index) => (
-            <div key={index}>
-              {editingField === `LearningOutcome-${index}` ? (
-                <div>
-                  <textarea
-                    value={outcome}
-                    onChange={(e) => handleArrayChange('LearningOutcomes', index, e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p>{outcome}</p>
-                  <button
-                    onClick={() => setEditingField(`LearningOutcome-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+{/* Course Description */}
+<div style={{ marginBottom: '20px' }}> {/* Space between sections */}
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <h3 style={{ marginRight: '20px' }}>Course Description</h3> {/* Added margin between label and value */}
+    {editingField === 'CourseDescription' ? (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <textarea
+          value={parsedSyllabus ? parsedSyllabus.CourseDescription : ''}
+          onChange={(e) => handleInputChange('CourseDescription', e.target.value)}
+          style={textareaStyle}
+        />
+        <button onClick={handleSave} style={saveButtonStyle}>
+          &#x2714;
+        </button>
+      </div>
+    ) : (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ margin: 0 }}>{parsedSyllabus ? parsedSyllabus.CourseDescription : ''}</p>
+        <button
+          onClick={() => setEditingField('CourseDescription')}
+          style={smallEditButtonStyle} // Small black-and-white button
+        >
+          &#9998;
+        </button>
+      </div>
+    )}
+  </div>
+</div>
 
-        {/* Course Goals */}
-        <div style={sectionContainerStyle}>
-          <h3>Course Goals</h3>
-          {parsedSyllabus.CourseGoals.map((goal, index) => (
-            <div key={index}>
-              {editingField === `CourseGoal-${index}` ? (
-                <div>
-                  <textarea
-                    value={goal}
-                    onChange={(e) => handleArrayChange('CourseGoals', index, e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p>{goal}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseGoal-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {/* Course Topics */}
-        <div style={sectionContainerStyle}>
-          <h3>Course Topics</h3>
-          {parsedSyllabus.CourseTopics.map((topic, index) => (
-            <div key={index}>
-              {editingField === `CourseTopic-Title-${index}` ? (
-                <div>
-                  <input
-                    type="text"
-                    value={topic.Topic}
-                    onChange={(e) => handleTopicChange(index, 'Topic', e.target.value)}
-                    style={inputStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p><strong>Title:</strong> {topic.Topic}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseTopic-Title-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
+       {/* Learning Outcomes */}
+<div style={sectionContainerStyle}>
+  <h3>Learning Outcomes</h3>
+  {parsedSyllabus.LearningOutcomes.map((outcome, index) => (
+    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between outcomes */}
+      {/* Outcome Section */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        {editingField === `LearningOutcome-${index}` ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <textarea
+              value={outcome}
+              onChange={(e) => handleArrayChange('LearningOutcomes', index, e.target.value)}
+              style={textareaStyle}
+            />
+            <button onClick={handleSave} style={saveButtonStyle}>
+              &#x2714;
+            </button>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0 }}>{outcome}</p>
+            <button
+              onClick={() => setEditingField(`LearningOutcome-${index}`)}
+              style={smallEditButtonStyle} // Use updated small black-and-white style
+            >
+              &#9998;
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
 
-              {editingField === `CourseTopic-Description-${index}` ? (
-                <div>
-                  <textarea
-                    value={topic.Description}
-                    onChange={(e) => handleTopicChange(index, 'Description', e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p><strong>Description:</strong> {topic.Description}</p>
-                  <button
-                    onClick={() => setEditingField(`CourseTopic-Description-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+
+       {/* Course Goals */}
+<div style={sectionContainerStyle}>
+  <h3>Course Goals</h3>
+  {parsedSyllabus.CourseGoals.map((goal, index) => (
+    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between course goals */}
+      {/* Goal Section */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        {editingField === `CourseGoal-${index}` ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <textarea
+              value={goal}
+              onChange={(e) => handleArrayChange('CourseGoals', index, e.target.value)}
+              style={textareaStyle}
+            />
+            <button onClick={handleSave} style={saveButtonStyle}>
+              &#x2714;
+            </button>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0 }}>{goal}</p>
+            <button
+              onClick={() => setEditingField(`CourseGoal-${index}`)}
+              style={smallEditButtonStyle} // Use updated small black-and-white style
+            >
+              &#9998;
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
+
+
+     {/* Course Topics */}
+<div style={sectionContainerStyle}>
+  <h3>Course Topics</h3>
+  {parsedSyllabus.CourseTopics.map((topic, index) => (
+    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between topics */}
+      {/* Title Section */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        {editingField === `CourseTopic-Title-${index}` ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <input
+              type="text"
+              value={topic.Topic}
+              onChange={(e) => handleTopicChange(index, 'Topic', e.target.value)}
+              style={inputStyle}
+            />
+            <button onClick={handleSave} style={saveButtonStyle}>
+              &#x2714;
+            </button>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0 }}><strong>Title:</strong> {topic.Topic}</p>
+            <button
+              onClick={() => setEditingField(`CourseTopic-Title-${index}`)}
+              style={smallEditButtonStyle} // Use updated style
+            >
+              &#9998;
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Description Section */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {editingField === `CourseTopic-Description-${index}` ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <textarea
+              value={topic.Description}
+              onChange={(e) => handleTopicChange(index, 'Description', e.target.value)}
+              style={textareaStyle}
+            />
+            <button onClick={handleSave} style={saveButtonStyle}>
+              &#x2714;
+            </button>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0 }}><strong>Description:</strong> {topic.Description}</p>
+            <button
+              onClick={() => setEditingField(`CourseTopic-Description-${index}`)}
+              style={smallEditButtonStyle} // Use updated style
+            >
+              &#9998;
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
+
 
         {/* Prerequisites */}
-        <div style={sectionContainerStyle}>
-          <h3>Prerequisites</h3>
-          {parsedSyllabus.Prerequisites.map((prerequisite, index) => (
-            <div key={index}>
-              {editingField === `Prerequisite-${index}` ? (
-                <div>
-                  <textarea
-                    value={prerequisite}
-                    onChange={(e) => handleArrayChange('Prerequisites', index, e.target.value)}
-                    style={textareaStyle}
-                  />
-                  <button onClick={handleSave} style={saveButtonStyle}>
-                    &#x2714;
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p>{prerequisite}</p>
-                  <button
-                    onClick={() => setEditingField(`Prerequisite-${index}`)}
-                    style={editButtonStyle}
-                  >
-                    &#9998;
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+<div style={sectionContainerStyle}>
+  <h3>Prerequisites</h3>
+  {parsedSyllabus.Prerequisites.map((prerequisite, index) => (
+    <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {editingField === `Prerequisite-${index}` ? (
+        <div style={{ flex: 1 }}>
+          <textarea
+            value={prerequisite}
+            onChange={(e) => handleArrayChange('Prerequisites', index, e.target.value)}
+            style={textareaStyle}
+          />
+          <button onClick={handleSave} style={saveButtonStyle}>
+            &#x2714;
+          </button>
         </div>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ margin: 0 }}>{prerequisite}</p>
+          <button
+            onClick={() => setEditingField(`Prerequisite-${index}`)}
+            style={smallEditButtonStyle} // Use updated style
+          >
+            &#9998;
+          </button>
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
+
 
         {/* Export and Back Buttons */}
         <div style={buttonContainerStyle}>
@@ -377,9 +421,7 @@ const syllabusContainerStyle: React.CSSProperties = {
   overflowY: 'scroll', // Enable vertical scrolling
 };
 
-const fieldContainerStyle: React.CSSProperties = {
-  marginBottom: '20px',
-};
+
 
 const sectionContainerStyle: React.CSSProperties = {
   marginBottom: '30px',
@@ -429,16 +471,6 @@ const exportButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-const editButtonStyle: React.CSSProperties = {
-  padding: '5px 10px',
-  marginRight: '10px',
-  backgroundColor: '#f0ad4e',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '4px',
-  fontSize: '14px',
-  cursor: 'pointer',
-};
 
 const saveButtonStyle: React.CSSProperties = {
   padding: '5px 10px',
@@ -449,5 +481,17 @@ const saveButtonStyle: React.CSSProperties = {
   fontSize: '14px',
   cursor: 'pointer',
 };
+
+const smallEditButtonStyle: React.CSSProperties = {
+    padding: '3px 6px',      // Smaller padding
+    marginLeft: '10px',      // Space between the text and the button
+    backgroundColor: '#fff', // White background
+    color: '#000',           // Black text
+    border: '1px solid #000', // Black border
+    borderRadius: '4px',     // Small border radius
+    fontSize: '12px',        // Smaller font size
+    cursor: 'pointer',
+  };
+  
 
 export default SyllabusPreviewFrame;

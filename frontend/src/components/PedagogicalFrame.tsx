@@ -1,41 +1,112 @@
 import React, { useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface PedagogicalFrameProps {
   framework: string;
   levels: string[];
-  onNext: (framework: string, levels: string[]) => void;
+  analysis: string;
+  onNext: (generatedSyllabus: any) => void; // Pass generated syllabus to the next step
   onBack: () => void;
 }
 
 const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
   framework: initialFramework,
   levels: initialLevels,
+  analysis,
   onNext,
   onBack,
 }) => {
   const [framework, setFramework] = useState<string>(initialFramework || 'Revised Bloom Taxonomy');
   const [selectedLevels, setSelectedLevels] = useState<string[]>(initialLevels || []);
+  const [isLoading, setIsLoading] = useState(false); // Handle loading state
+  const [isSyllabusReady, setIsSyllabusReady] = useState(false); // Manage when syllabus is ready
+  const [generatedSyllabus, setGeneratedSyllabus] = useState(null); // Store the generated syllabus
+
+  const bloomLevels = ['Remember', 'Understand', 'Apply', 'Analyse', 'Evaluate', 'Create'];
 
   const handleFrameworkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setFramework(event.target.value);
   };
 
+  // Ensure that all previous levels are selected when a higher one is chosen
   const handleLevelChange = (level: string) => {
-    setSelectedLevels((prevSelectedLevels) =>
-      prevSelectedLevels.includes(level)
-        ? prevSelectedLevels.filter((l) => l !== level)
-        : [...prevSelectedLevels, level]
-    );
+    const levelIndex = bloomLevels.indexOf(level);
+    if (levelIndex >= 0) {
+      const newSelectedLevels = bloomLevels.slice(0, levelIndex + 1); // Select all levels up to and including the clicked one
+      setSelectedLevels(newSelectedLevels);
+    }
   };
 
-  const handleSubmit = () => {
-    console.log("quanti seleceted: "+selectedLevels.length);
-    
-    onNext(framework, selectedLevels);
+  const handleSubmit = async () => {
+    if (selectedLevels.length === 0) {
+      // Show toast notification if no levels are selected
+      toast.error('Please select at least one level before generating the syllabus.');
+      return; // Prevent further action if no levels are selected
+    }
+
+    setIsLoading(true);
+
+    // generate the syllabus
+    try {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const baseURL = isProduction ? 'https://backend-production-60c1.up.railway.app' : 'http://localhost:5002';
+      const url = `${baseURL}/generateSyllabus`;
+
+      const body = JSON.stringify(analysis);
+      const transformed = transformInput(body, selectedLevels);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transformed),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate syllabus');
+      }
+
+      const data = await response.json();
+      setGeneratedSyllabus(data); // Store the generated syllabus
+      setIsSyllabusReady(true); // Enable "Next" button when the syllabus is ready
+    } catch (error) {
+      console.error('Error generating syllabus:', error);
+      toast.error('Error generating the syllabus. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleNextClick = () => {
+    if (generatedSyllabus) {
+      onNext(generatedSyllabus); // Pass the generated syllabus to the next component
+    }
+  };
+
+  function transformInput(inputString: string, selectedBloomLevels: string[]) {
+    try {
+      const parsedData = JSON.parse(inputString);
+      const bloomLevelIndex = Math.max(
+        ...selectedBloomLevels.map((level) => bloomLevels.indexOf(level)).filter((index) => index !== -1)
+      );
+
+      const { Prompt, ...rest } = parsedData;
+      return {
+        Analysis: rest,
+        bloomLevel: bloomLevelIndex,
+      };
+    } catch (error) {
+      console.error('Invalid JSON string:', error);
+      return null;
+    }
+  }
 
   return (
     <div style={formContainerStyle}>
+      <ToastContainer /> {/* Add ToastContainer to render toast notifications */}
+
       <h2 style={headerStyle}>Contextual information</h2>
 
       <label style={labelStyle}>
@@ -48,13 +119,13 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
 
       <label style={labelStyle}>Select a level</label>
       <div style={levelsContainerStyle}>
-        {['Remember', 'Understand', 'Apply', 'Analyse', 'Evaluate', 'Create'].map((level) => (
+        {bloomLevels.map((level) => (
           <div key={level} style={checkboxContainerStyle}>
             <input
               type="checkbox"
               id={`level-${level}`}
               value={level}
-              checked={selectedLevels.includes(level)}
+              checked={selectedLevels.includes(level)} // Ensure levels are correctly checked
               onChange={() => handleLevelChange(level)}
               style={checkboxStyle}
             />
@@ -65,12 +136,24 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
         ))}
       </div>
 
+      {/* Show the spinner/message when loading */}
+      {isLoading && (
+        <div style={spinnerStyle}>
+          <div className="spinner"></div> {/* This could be a spinner graphic */}
+          <p>Generating syllabus, please wait...</p>
+        </div>
+      )}
+
       <div style={navigationButtonsStyle}>
         <button style={navButtonStyle} onClick={onBack}>
           ← Back
         </button>
-        <button onClick={handleSubmit} style={navButtonStyle}>
-          Next Step →
+        <button
+          onClick={isSyllabusReady ? handleNextClick : handleSubmit} // Generate the syllabus if it's not ready, otherwise move to the next step
+          style={isSyllabusReady || !isLoading ? generateButtonStyle : disabledButtonStyle} // Emphasize Generate button when it's ready to be clicked
+          disabled={isLoading} // Disable during loading
+        >
+          {isLoading ? 'Generating syllabus...' : isSyllabusReady ? 'Next Step →' : 'Generate Syllabus'}
         </button>
       </div>
     </div>
@@ -131,6 +214,14 @@ const levelLabelStyle: React.CSSProperties = {
   fontSize: '16px',
 };
 
+const spinnerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '10px',
+  margin: '20px 0',
+};
+
 const navigationButtonsStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -145,6 +236,27 @@ const navButtonStyle: React.CSSProperties = {
   borderRadius: '20px',
   fontSize: '16px',
   cursor: 'pointer',
+};
+
+const generateButtonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  backgroundColor: '#4CAF50', // Highlight Generate button with a green color
+  color: '#fff',
+  border: 'none',
+  borderRadius: '20px',
+  fontSize: '16px',
+  cursor: 'pointer',
+  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', // Add some emphasis with a shadow
+};
+
+const disabledButtonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  backgroundColor: '#ccc', // Disabled button color
+  color: '#fff',
+  border: 'none',
+  borderRadius: '20px',
+  fontSize: '16px',
+  cursor: 'not-allowed',
 };
 
 export default PedagogicalFrame;
