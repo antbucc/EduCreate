@@ -13,6 +13,8 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
   const [isAnalyzable, setIsAnalyzable] = useState<boolean>(false);
   const [urlError, setUrlError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false); // State for loading spinner
+  const [topics, setTopics] = useState<string[]>([]); // State to hold the topics
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]); // State for selected topics
 
   useEffect(() => {
     setIsAnalyzable(Boolean(url && validateUrl(url)));
@@ -70,8 +72,12 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
 
       if (response.ok) {
         const result = await response.json();
-        const topics = result.MainTopics.map((topicObj: { Topic: string }) => topicObj.Topic);
-        onComplete(result, topics, null, url);
+        const generatedTopics = result.MainTopics.map((topicObj: { Topic: string }) => topicObj.Topic);
+
+        // Set topics and mark all topics as selected by default
+        setTopics(generatedTopics);
+        setSelectedTopics(generatedTopics); // Select all topics by default
+        onComplete(result, generatedTopics, null, url);
       } else {
         console.error('Material analysis failed:', response.statusText);
       }
@@ -82,13 +88,20 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
     }
   };
 
+  const handleTopicChange = (topic: string) => {
+    if (selectedTopics.includes(topic)) {
+      setSelectedTopics(selectedTopics.filter((t) => t !== topic)); // Unselect if already selected
+    } else {
+      setSelectedTopics([...selectedTopics, topic]); // Select if not already selected
+    }
+  };
+
   return (
     <div style={uploadFrameStyle}>
       <h2 style={headerStyle}>Upload your resources</h2>
       <p style={descriptionStyle}>Resources from URLs can be added</p>
 
       <div style={uploadSectionStyle}>
-        {/* Hide PDF upload functionality */}
         <div style={urlInputContainerStyle}>
           <div style={labelContainerStyle}>
             <label style={labelStyle}>URL</label>
@@ -124,6 +137,24 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
           <img src={analyseIcon} alt="Analyse Icon" style={iconImageStyle} />
         )}
       </button>
+
+      {/* Render the topics with checkboxes */}
+      {topics.length > 0 && (
+        <div style={topicsContainerStyle}>
+          <h3 style={topicsHeaderStyle}>Topics:</h3>
+          {topics.map((topic, index) => (
+            <div key={index} style={topicCheckboxStyle}>
+              <input
+                type="checkbox"
+                id={`topic-${index}`}
+                checked={selectedTopics.includes(topic)} // Ensure topics are checked if included in selectedTopics
+                onChange={() => handleTopicChange(topic)} // Allow deselecting
+              />
+              <label htmlFor={`topic-${index}`}>{topic}</label>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -243,6 +274,23 @@ const spinnerStyle: React.CSSProperties = {
   animation: 'spin 1s linear infinite',
   position: 'absolute',
   right: '10px',
+};
+
+const topicsContainerStyle: React.CSSProperties = {
+  marginTop: '20px',
+};
+
+const topicsHeaderStyle: React.CSSProperties = {
+  fontSize: '18px',
+  fontWeight: 600,
+  marginBottom: '10px',
+};
+
+const topicCheckboxStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  marginBottom: '10px',
 };
 
 export default UploadFrame;

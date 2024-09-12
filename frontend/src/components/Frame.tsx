@@ -5,7 +5,6 @@ import Step from './Step';
 import UploadFrame from './UploadFrame';
 import ContextualFrame from './ContextualFrame';
 import PedagogicalFrame from './PedagogicalFrame';
-import SyllabusFrame from './SyllabusFrame';
 import SyllabusPreviewFrame from './SyllabusPreviewFrame';
 
 
@@ -20,8 +19,8 @@ const Frame: React.FC = () => {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<string>(''); // Analysis as string
   const [classLevel, setClassLevel] = useState<string>('Academic');
-  const [pedagogicalFramework, setPedagogicalFramework] = useState<string>('Revised Bloom Taxonomy');
-  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [pedagogicalFramework] = useState<string>('Revised Bloom Taxonomy');
+  const [selectedLevels] = useState<string[]>([]);
   const [syllabus, setSyllabus] = useState<string>('');
   
   // Handle file or URL upload completion
@@ -47,17 +46,17 @@ const Frame: React.FC = () => {
   };
 
   // Handle pedagogical information completion
-  const handlePedagogicalComplete = (framework: string, levels: string[]) => {
-    setPedagogicalFramework(framework);
-    setSelectedLevels(levels);
-    setActiveStep(4);
-  };
+  //const handlePedagogicalComplete = (framework: string, levels: string[]) => {
+  //  setPedagogicalFramework(framework);
+  //  setSelectedLevels(levels);
+  //  setActiveStep(4);
+  //};
 
 
   // Handle final syllabus preview
   const handleSyllabusPreviewComplete = (syllabus: string) => {
     setSyllabus(syllabus);
-    setActiveStep(5); // Move to the final step to preview the syllabus
+    setActiveStep(4); // Move to the final step to preview the syllabus
   };
 
   const handleStepClick = (step: number) => {
@@ -99,23 +98,14 @@ const Frame: React.FC = () => {
           />
           <Step
             stepNumber={4}
-            title="Syllabus"
-            description="Generate the syllabus."
-            isActive={activeStep === 4}
-            isLastStep={false}
-            onClick={() => handleStepClick(4)}
-          />
-          <Step
-            stepNumber={5}
             title="Preview & Export"
             description="Preview and export your syllabus."
-            isActive={activeStep === 5}
+            isActive={activeStep === 4}
             isLastStep={true}
-            onClick={() => handleStepClick(5)}
+            onClick={() => handleStepClick(4)}
           />
         </div>
       </div>
-
       {activeStep === 1 && (
         <UploadFrame
           onComplete={handleUploadComplete}
@@ -136,22 +126,15 @@ const Frame: React.FC = () => {
         <PedagogicalFrame
           framework={pedagogicalFramework}
           levels={selectedLevels}
-          onNext={handlePedagogicalComplete}
+          analysis = {analysis}
+          onNext={handleSyllabusPreviewComplete}
           onBack={() => setActiveStep(2)}
         />
       )}
-      {activeStep === 4 && analysis && (
-        <SyllabusFrame
-          analysis={analysis} // Pass analysis as string
-          levels={selectedLevels}
-          onNext={handleSyllabusPreviewComplete} // Move to the syllabus preview
-          onBack={() => setActiveStep(3)}
-        />
-      )}
-      {activeStep === 5 && (
+      {activeStep === 4 && (
         <SyllabusPreviewFrame
           syllabus = {syllabus}
-          onBack={() => setActiveStep(4)}
+          onBack={() => setActiveStep(3)}
         />
       )}
     </div>
