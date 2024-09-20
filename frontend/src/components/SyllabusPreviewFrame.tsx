@@ -88,9 +88,7 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({
 
     try {
       const isProduction = process.env.NODE_ENV === 'production';
-      const baseURL = isProduction
-        ? 'https://backend-production-60c1.up.railway.app'
-        : 'http://localhost:5002';
+      const baseURL = 'https://backend-production-60c1.up.railway.app';
       const url = `${baseURL}/generateCoursePlan`;
 
       const body = JSON.stringify({

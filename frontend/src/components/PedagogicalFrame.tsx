@@ -51,7 +51,7 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
     // generate the syllabus
     try {
       const isProduction = process.env.NODE_ENV === 'production';
-      const baseURL = isProduction ? 'https://backend-production-60c1.up.railway.app' : 'http://localhost:5002';
+      const baseURL = 'https://backend-production-60c1.up.railway.app';
       const url = `${baseURL}/generateSyllabus`;
 
       const body = JSON.stringify(analysis);
