@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import logo from '../assets/logo1.png';
 import { jsPDF } from 'jspdf';
+import { FaCheck, FaTimes } from 'react-icons/fa';
 
 interface CourseTopic {
   Topic: string;
@@ -20,14 +20,25 @@ interface SyllabusData {
 
 interface SyllabusPreviewFrameProps {
   syllabus: string | SyllabusData;
+  analysis: string;
   onBack: () => void;
+  onNext: (generatedPlan: any) => void;
 }
 
-const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, onBack }) => {
+const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({
+  syllabus,
+  analysis,
+  onBack,
+  onNext,
+}) => {
   const [parsedSyllabus, setParsedSyllabus] = useState<SyllabusData | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [numberOfLessons, setNumberOfLessons] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCoursePlanReady, setIsCoursePlanReady] = useState(false);
+  const [generatedCoursePlan, setGeneratedCoursePlan] = useState<any>(null);
 
-  // Parse the syllabus string when the component mounts
   useEffect(() => {
     if (typeof syllabus === 'string') {
       try {
@@ -37,13 +48,13 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
         console.error('Failed to parse syllabus:', error);
       }
     } else {
-      setParsedSyllabus(syllabus); // If it's already an object, set it directly
+      setParsedSyllabus(syllabus);
     }
   }, [syllabus]);
 
   const handleSave = () => {
     toast.success('Field saved successfully!');
-    setEditingField(null); // Stop editing
+    setEditingField(null);
   };
 
   const handleInputChange = (field: keyof SyllabusData, value: string) => {
@@ -68,90 +79,153 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
     }
   };
 
-  // Export syllabus as a styled PDF
-  const handleExportSyllabus = () => {
-    if (parsedSyllabus) {
-      const doc = new jsPDF();
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
-      // Add logo
-      const logoUrl = logo;// Replace with actual logo URL or base64
-      doc.addImage(logoUrl, 'PNG', 10, 10, 50, 20);
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    closeModal();
 
-      // Add title
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(40, 44, 52);
-      doc.text(parsedSyllabus.CourseTitle, 105, 40, { align: 'center' });
+    try {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const baseURL = isProduction
+        ? 'https://backend-production-60c1.up.railway.app'
+        : 'http://localhost:5002';
+      const url = `${baseURL}/generateCoursePlan`;
 
-      // Line break
-      doc.setLineWidth(0.5);
-      doc.setDrawColor(40, 44, 52);
-      doc.line(20, 45, 190, 45); // Horizontal line after title
-
-      // Add Course Description
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Course Description:', 20, 60);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      doc.text(parsedSyllabus.CourseDescription, 20, 70, { maxWidth: 170 });
-
-      // Add Learning Outcomes
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Learning Outcomes:', 20, 100);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      parsedSyllabus.LearningOutcomes.forEach((outcome, index) => {
-        doc.text(`${index + 1}. ${outcome}`, 20, 110 + index * 10);
+      const body = JSON.stringify({
+        analysis,
+        numberOfLessons,
+        lessonDuration: 120,
       });
 
-      // New page for Course Goals and Topics
-      doc.addPage();
-
-      // Add Course Goals
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Course Goals:', 20, 20);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      parsedSyllabus.CourseGoals.forEach((goal, index) => {
-        doc.text(`${index + 1}. ${goal}`, 20, 30 + index * 10);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
       });
 
-      // Add Course Topics
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Course Topics:', 20, 100);
+      if (!response.ok) {
+        throw new Error('Failed to generate course plan');
+      }
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      parsedSyllabus.CourseTopics.forEach((topic, index) => {
-        doc.text(`${index + 1}. ${topic.Topic}`, 20, 110 + index * 20);
-        doc.text(`Description: ${topic.Description}`, 20, 115 + index * 20, { maxWidth: 170 });
-      });
-
-      // Add Prerequisites
-      doc.addPage();
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Prerequisites:', 20, 20);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      parsedSyllabus.Prerequisites.forEach((prerequisite, index) => {
-        doc.text(`${index + 1}. ${prerequisite}`, 20, 30 + index * 10);
-      });
-
-      // Save the PDF
-      doc.save('syllabus.pdf');
+      const data = await response.json();
+      setGeneratedCoursePlan(data);
+      setIsCoursePlanReady(true);
+    } catch (error) {
+      console.error('Error generating course plan:', error);
+      toast.error('Error generating the course plan. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  
+  const handleNextClick = () => {
+    if (generatedCoursePlan) {
+      onNext(generatedCoursePlan);
+    }
+  };
+
+// Handle PDF export with enhanced Course Topics style
+const handleExportSyllabus = () => {
+  if (!parsedSyllabus) return;
+
+  const doc = new jsPDF();
+  const lineHeight = 10;
+  let yOffset = 20; // Initial vertical offset for text
+  const pageHeight = doc.internal.pageSize.height;
+
+  // Function to add new page if necessary
+  const checkAndAddPage = () => {
+    if (yOffset >= pageHeight - 20) {
+      doc.addPage();
+      yOffset = 20; // Reset offset for new page
+    }
+  };
+
+  // Set title for the PDF
+  doc.setFontSize(16);
+  doc.text('Syllabus', 10, yOffset);
+  yOffset += lineHeight + 5;
+
+  // Course Title
+  doc.setFontSize(12);
+  doc.text(`Course Title: ${parsedSyllabus.CourseTitle}`, 10, yOffset);
+  yOffset += lineHeight;
+  checkAndAddPage();
+
+  // Course Description
+  doc.text('Course Description:', 10, yOffset);
+  yOffset += lineHeight;
+  doc.setFontSize(10);
+  doc.text(parsedSyllabus.CourseDescription, 10, yOffset, { maxWidth: 180 });
+  yOffset += lineHeight * (Math.ceil(doc.getTextDimensions(parsedSyllabus.CourseDescription).h / lineHeight)) + 5;
+  checkAndAddPage();
+
+  // Learning Outcomes
+  doc.setFontSize(12);
+  doc.text('Learning Outcomes:', 10, yOffset);
+  yOffset += lineHeight;
+  parsedSyllabus.LearningOutcomes.forEach((outcome, index) => {
+    doc.setFontSize(10);
+    doc.text(`${index + 1}. ${outcome}`, 10, yOffset, { maxWidth: 180 });
+    yOffset += lineHeight;
+    checkAndAddPage();
+  });
+  yOffset += 5;
+  checkAndAddPage();
+
+  // Course Goals
+  doc.setFontSize(12);
+  doc.text('Course Goals:', 10, yOffset);
+  yOffset += lineHeight;
+  parsedSyllabus.CourseGoals.forEach((goal, index) => {
+    doc.setFontSize(10);
+    doc.text(`${index + 1}. ${goal}`, 10, yOffset, { maxWidth: 180 });
+    yOffset += lineHeight;
+    checkAndAddPage();
+  });
+  yOffset += 5;
+  checkAndAddPage();
+
+  // Prerequisites
+  doc.setFontSize(12);
+  doc.text('Prerequisites:', 10, yOffset);
+  yOffset += lineHeight;
+  parsedSyllabus.Prerequisites.forEach((prerequisite, index) => {
+    doc.setFontSize(10);
+    doc.text(`${index + 1}. ${prerequisite}`, 10, yOffset, { maxWidth: 180 });
+    yOffset += lineHeight;
+    checkAndAddPage();
+  });
+  yOffset += 5;
+  checkAndAddPage();
+
+  // Course Topics
+  doc.setFontSize(12);
+  doc.text('Course Topics:', 10, yOffset);
+  yOffset += lineHeight;
+  parsedSyllabus.CourseTopics.forEach((topic, index) => {
+    // Bold the Topic Title
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${index + 1}. ${topic.Topic}`, 10, yOffset);
+    yOffset += lineHeight;
+
+    // Reset font for Topic Description and indent it
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`- ${topic.Description}`, 15, yOffset, { maxWidth: 180 });
+    yOffset += lineHeight + 5; // Add extra spacing after each topic
+    checkAndAddPage();
+  });
+
+  // Save the PDF
+  doc.save('syllabus.pdf');
+};
+
 
   if (!parsedSyllabus) {
     return <div>Loading...</div>;
@@ -161,245 +235,226 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
     <div style={mainContainerStyle}>
       <ToastContainer />
       <div style={syllabusContainerStyle}>
-    
+        <h2 style={headerStyle}>Syllabus Preview</h2>
 
-        <h2>Syllabus Preview</h2>
-
-{/* Course Title */}
-<div style={{ marginBottom: '20px' }}> {/* Space between sections */}
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-    <h3 style={{ marginRight: '20px' }}>Course Title</h3> {/* Added margin between label and value */}
-    {editingField === 'CourseTitle' ? (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <input
-          type="text"
-          value={parsedSyllabus ? parsedSyllabus.CourseTitle : ''}
-          onChange={(e) => handleInputChange('CourseTitle', e.target.value)}
-          style={inputStyle}
-        />
-        <button onClick={handleSave} style={saveButtonStyle}>
-          &#x2714;
-        </button>
-      </div>
-    ) : (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0 }}>{parsedSyllabus ? parsedSyllabus.CourseTitle : ''}</p>
-        <button
-          onClick={() => setEditingField('CourseTitle')}
-          style={smallEditButtonStyle} // Small black-and-white button
-        >
-          &#9998;
-        </button>
-      </div>
-    )}
-  </div>
-</div>
-
-{/* Course Description */}
-<div style={{ marginBottom: '20px' }}> {/* Space between sections */}
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-    <h3 style={{ marginRight: '20px' }}>Course Description</h3> {/* Added margin between label and value */}
-    {editingField === 'CourseDescription' ? (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <textarea
-          value={parsedSyllabus ? parsedSyllabus.CourseDescription : ''}
-          onChange={(e) => handleInputChange('CourseDescription', e.target.value)}
-          style={textareaStyle}
-        />
-        <button onClick={handleSave} style={saveButtonStyle}>
-          &#x2714;
-        </button>
-      </div>
-    ) : (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0 }}>{parsedSyllabus ? parsedSyllabus.CourseDescription : ''}</p>
-        <button
-          onClick={() => setEditingField('CourseDescription')}
-          style={smallEditButtonStyle} // Small black-and-white button
-        >
-          &#9998;
-        </button>
-      </div>
-    )}
-  </div>
-</div>
-
-
-       {/* Learning Outcomes */}
-<div style={sectionContainerStyle}>
-  <h3>Learning Outcomes</h3>
-  {parsedSyllabus.LearningOutcomes.map((outcome, index) => (
-    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between outcomes */}
-      {/* Outcome Section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        {editingField === `LearningOutcome-${index}` ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <textarea
-              value={outcome}
-              onChange={(e) => handleArrayChange('LearningOutcomes', index, e.target.value)}
-              style={textareaStyle}
-            />
-            <button onClick={handleSave} style={saveButtonStyle}>
-              &#x2714;
-            </button>
+        {/* Course Title */}
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Course Title</h3>
+          <div style={inputContainerStyle}>
+            {editingField === 'CourseTitle' ? (
+              <div style={flexContainerStyle}>
+                <input
+                  type="text"
+                  value={parsedSyllabus ? parsedSyllabus.CourseTitle : ''}
+                  onChange={(e) => handleInputChange('CourseTitle', e.target.value)}
+                  style={inputStyle}
+                />
+                <button onClick={handleSave} style={saveButtonStyle}>
+                  &#x2714;
+                </button>
+              </div>
+            ) : (
+              <div style={flexContainerStyle}>
+                <p style={textContentStyle}>{parsedSyllabus ? parsedSyllabus.CourseTitle : ''}</p>
+                <button onClick={() => setEditingField('CourseTitle')} style={smallEditButtonStyle}>
+                  &#9998;
+                </button>
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <p style={{ margin: 0 }}>{outcome}</p>
-            <button
-              onClick={() => setEditingField(`LearningOutcome-${index}`)}
-              style={smallEditButtonStyle} // Use updated small black-and-white style
-            >
-              &#9998;
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  ))}
-</div>
+        </div>
 
+        {/* Course Description */}
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Course Description</h3>
+          <div style={inputContainerStyle}>
+            {editingField === 'CourseDescription' ? (
+              <div style={flexContainerStyle}>
+                <textarea
+                  value={parsedSyllabus ? parsedSyllabus.CourseDescription : ''}
+                  onChange={(e) => handleInputChange('CourseDescription', e.target.value)}
+                  style={scrollableTextareaStyle}
+                />
+                <button onClick={handleSave} style={saveButtonStyle}>
+                  &#x2714;
+                </button>
+              </div>
+            ) : (
+              <div style={flexContainerStyle}>
+                <p style={textContentStyle}>{parsedSyllabus ? parsedSyllabus.CourseDescription : ''}</p>
+                <button onClick={() => setEditingField('CourseDescription')} style={smallEditButtonStyle}>
+                  &#9998;
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
-       {/* Course Goals */}
-<div style={sectionContainerStyle}>
-  <h3>Course Goals</h3>
-  {parsedSyllabus.CourseGoals.map((goal, index) => (
-    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between course goals */}
-      {/* Goal Section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        {editingField === `CourseGoal-${index}` ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <textarea
-              value={goal}
-              onChange={(e) => handleArrayChange('CourseGoals', index, e.target.value)}
-              style={textareaStyle}
-            />
-            <button onClick={handleSave} style={saveButtonStyle}>
-              &#x2714;
-            </button>
-          </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <p style={{ margin: 0 }}>{goal}</p>
-            <button
-              onClick={() => setEditingField(`CourseGoal-${index}`)}
-              style={smallEditButtonStyle} // Use updated small black-and-white style
-            >
-              &#9998;
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  ))}
-</div>
+        {/* Learning Outcomes */}
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Learning Outcomes</h3>
+          {parsedSyllabus.LearningOutcomes.map((outcome, index) => (
+            <div key={index} style={inputContainerStyle}>
+              {editingField === `LearningOutcome-${index}` ? (
+                <div style={flexContainerStyle}>
+                  <textarea
+                    value={outcome}
+                    onChange={(e) => handleArrayChange('LearningOutcomes', index, e.target.value)}
+                    style={scrollableTextareaStyle}
+                  />
+                  <button onClick={handleSave} style={saveButtonStyle}>
+                    &#x2714;
+                  </button>
+                </div>
+              ) : (
+                <div style={flexContainerStyle}>
+                  <p style={textContentStyle}>{outcome}</p>
+                  <button onClick={() => setEditingField(`LearningOutcome-${index}`)} style={smallEditButtonStyle}>
+                    &#9998;
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-
-     {/* Course Topics */}
-<div style={sectionContainerStyle}>
-  <h3>Course Topics</h3>
-  {parsedSyllabus.CourseTopics.map((topic, index) => (
-    <div key={index} style={{ marginBottom: '20px' }}> {/* Added space between topics */}
-      {/* Title Section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        {editingField === `CourseTopic-Title-${index}` ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <input
-              type="text"
-              value={topic.Topic}
-              onChange={(e) => handleTopicChange(index, 'Topic', e.target.value)}
-              style={inputStyle}
-            />
-            <button onClick={handleSave} style={saveButtonStyle}>
-              &#x2714;
-            </button>
-          </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <p style={{ margin: 0 }}><strong>Title:</strong> {topic.Topic}</p>
-            <button
-              onClick={() => setEditingField(`CourseTopic-Title-${index}`)}
-              style={smallEditButtonStyle} // Use updated style
-            >
-              &#9998;
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Description Section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {editingField === `CourseTopic-Description-${index}` ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <textarea
-              value={topic.Description}
-              onChange={(e) => handleTopicChange(index, 'Description', e.target.value)}
-              style={textareaStyle}
-            />
-            <button onClick={handleSave} style={saveButtonStyle}>
-              &#x2714;
-            </button>
-          </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <p style={{ margin: 0 }}><strong>Description:</strong> {topic.Description}</p>
-            <button
-              onClick={() => setEditingField(`CourseTopic-Description-${index}`)}
-              style={smallEditButtonStyle} // Use updated style
-            >
-              &#9998;
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  ))}
-</div>
-
+        {/* Course Goals */}
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Course Goals</h3>
+          {parsedSyllabus.CourseGoals.map((goal, index) => (
+            <div key={index} style={inputContainerStyle}>
+              {editingField === `CourseGoal-${index}` ? (
+                <div style={flexContainerStyle}>
+                  <textarea
+                    value={goal}
+                    onChange={(e) => handleArrayChange('CourseGoals', index, e.target.value)}
+                    style={scrollableTextareaStyle}
+                  />
+                  <button onClick={handleSave} style={saveButtonStyle}>
+                    &#x2714;
+                  </button>
+                </div>
+              ) : (
+                <div style={flexContainerStyle}>
+                  <p style={textContentStyle}>{goal}</p>
+                  <button onClick={() => setEditingField(`CourseGoal-${index}`)} style={smallEditButtonStyle}>
+                    &#9998;
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Prerequisites */}
-<div style={sectionContainerStyle}>
-  <h3>Prerequisites</h3>
-  {parsedSyllabus.Prerequisites.map((prerequisite, index) => (
-    <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      {editingField === `Prerequisite-${index}` ? (
-        <div style={{ flex: 1 }}>
-          <textarea
-            value={prerequisite}
-            onChange={(e) => handleArrayChange('Prerequisites', index, e.target.value)}
-            style={textareaStyle}
-          />
-          <button onClick={handleSave} style={saveButtonStyle}>
-            &#x2714;
-          </button>
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Prerequisites</h3>
+          {parsedSyllabus.Prerequisites.map((prerequisite, index) => (
+            <div key={index} style={inputContainerStyle}>
+              {editingField === `Prerequisite-${index}` ? (
+                <div style={flexContainerStyle}>
+                  <textarea
+                    value={prerequisite}
+                    onChange={(e) => handleArrayChange('Prerequisites', index, e.target.value)}
+                    style={scrollableTextareaStyle}
+                  />
+                  <button onClick={handleSave} style={saveButtonStyle}>
+                    &#x2714;
+                  </button>
+                </div>
+              ) : (
+                <div style={flexContainerStyle}>
+                  <p style={textContentStyle}>{prerequisite}</p>
+                  <button onClick={() => setEditingField(`Prerequisite-${index}`)} style={smallEditButtonStyle}>
+                    &#9998;
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ margin: 0 }}>{prerequisite}</p>
-          <button
-            onClick={() => setEditingField(`Prerequisite-${index}`)}
-            style={smallEditButtonStyle} // Use updated style
-          >
-            &#9998;
-          </button>
+
+        {/* Course Topics */}
+        <div style={sectionContainerStyle}>
+          <h3 style={sectionHeaderStyle}>Course Topics</h3>
+          {parsedSyllabus.CourseTopics.map((topic, index) => (
+            <div key={index} style={inputContainerStyle}>
+              {editingField === `CourseTopic-${index}` ? (
+                <div style={flexContainerStyle}>
+                  <textarea
+                    value={topic.Topic}
+                    onChange={(e) => handleTopicChange(index, 'Topic', e.target.value)}
+                    style={scrollableTextareaStyle}
+                  />
+                  <textarea
+                    value={topic.Description}
+                    onChange={(e) => handleTopicChange(index, 'Description', e.target.value)}
+                    style={scrollableTextareaStyle}
+                  />
+                  <button onClick={handleSave} style={saveButtonStyle}>
+                    &#x2714;
+                  </button>
+                </div>
+              ) : (
+                <div style={flexContainerStyle}>
+                  <p style={textContentStyle}>{topic.Topic}: {topic.Description}</p>
+                  <button onClick={() => setEditingField(`CourseTopic-${index}`)} style={smallEditButtonStyle}>
+                    &#9998;
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      )}
-    </div>
-  ))}
-</div>
-
-
 
         {/* Export and Back Buttons */}
         <div style={buttonContainerStyle}>
           <button style={backButtonStyle} onClick={onBack}>
             ← Back
           </button>
+          {isCoursePlanReady && (
+            <button onClick={handleNextClick} style={nextButtonStyle}>
+              Next: View Course Plan →
+            </button>
+          )}
+          <button onClick={openModal} style={generateButtonStyle} disabled={isLoading}>
+            {isLoading ? 'Generating...' : 'Generate Course Plan'}
+          </button>
           <button style={exportButtonStyle} onClick={handleExportSyllabus}>
             Export PDF
           </button>
         </div>
       </div>
+
+
+{/* Modal for number of lessons */}
+{isModalOpen && (
+  <div style={modalOverlayStyle}>
+    <div style={smallModalContentStyle}>
+      <h3 style={modalTitleStyle}>Course Plan</h3>
+      <div style={modalInputWrapperStyle}>
+        <label style={modalLabelStyle}>Number of Lessons:</label>
+        <input
+          type="number"
+          value={numberOfLessons}
+          onChange={(e) => setNumberOfLessons(Number(e.target.value))}
+          min={1}
+          style={smallNumberInputStyle} // Reduced size for the input field
+        />
+      </div>
+      <div style={modalButtonContainerStyle}>
+        <button style={iconButtonStyle} onClick={handleSubmit}>
+          <FaCheck /> {/* Checkmark icon for Submit */}
+        </button>
+        <button style={iconButtonStyle} onClick={closeModal}>
+          <FaTimes /> {/* Times (X) icon for Close */}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 };
@@ -407,7 +462,8 @@ const SyllabusPreviewFrame: React.FC<SyllabusPreviewFrameProps> = ({ syllabus, o
 // Styles for the Syllabus Preview
 const mainContainerStyle: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'space-between',
+  justifyContent: 'center',
+  padding: '20px',
 };
 
 const syllabusContainerStyle: React.CSSProperties = {
@@ -415,34 +471,69 @@ const syllabusContainerStyle: React.CSSProperties = {
   backgroundColor: '#fff',
   borderRadius: '8px',
   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-  maxWidth: '800px',
-  margin: '0 auto',
-  maxHeight: '600px',  // Add max-height for scroll
-  overflowY: 'scroll', // Enable vertical scrolling
+  maxWidth: '900px',
+  maxHeight: '600px',
+  overflowY: 'auto',
 };
 
-
-
 const sectionContainerStyle: React.CSSProperties = {
-  marginBottom: '30px',
-  padding: '15px',
-  border: '1px solid #ccc',
+  marginBottom: '20px',
+  padding: '10px',
   borderRadius: '8px',
   backgroundColor: '#f9f9f9',
 };
 
-const textareaStyle: React.CSSProperties = {
+const sectionHeaderStyle: React.CSSProperties = {
+  fontSize: '18px',
+  fontWeight: 'bold',
+  marginBottom: '10px',
+};
+
+const textContentStyle: React.CSSProperties = {
+  whiteSpace: 'pre-wrap',
+  lineHeight: '1.5',
+};
+
+const scrollableTextareaStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px',
   fontSize: '16px',
-  marginBottom: '10px',
+  resize: 'none',
+  overflowY: 'auto',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px',
-  margin: '10px 0',
   fontSize: '16px',
+};
+
+const flexContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const inputContainerStyle: React.CSSProperties = {
+  marginBottom: '10px',
+};
+
+const saveButtonStyle: React.CSSProperties = {
+  padding: '5px 10px',
+  backgroundColor: '#fff',
+  color: '#000',
+  border: '1px solid #000',
+  borderRadius: '5px',
+  cursor: 'pointer',
+};
+
+const smallEditButtonStyle: React.CSSProperties = {
+  padding: '5px 10px',
+  backgroundColor: '#fff',
+  color: '#000',
+  border: '1px solid #000',
+  borderRadius: '5px',
+  cursor: 'pointer',
 };
 
 const buttonContainerStyle: React.CSSProperties = {
@@ -456,8 +547,7 @@ const backButtonStyle: React.CSSProperties = {
   backgroundColor: '#01A9C2',
   color: '#fff',
   border: 'none',
-  borderRadius: '4px',
-  fontSize: '16px',
+  borderRadius: '5px',
   cursor: 'pointer',
 };
 
@@ -466,32 +556,100 @@ const exportButtonStyle: React.CSSProperties = {
   backgroundColor: '#4CAF50',
   color: '#fff',
   border: 'none',
-  borderRadius: '4px',
-  fontSize: '16px',
+  borderRadius: '5px',
   cursor: 'pointer',
 };
 
-
-const saveButtonStyle: React.CSSProperties = {
-  padding: '5px 10px',
-  backgroundColor: '#5cb85c',
+const nextButtonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  backgroundColor: '#FFA500',
   color: '#fff',
   border: 'none',
-  borderRadius: '4px',
-  fontSize: '14px',
+  borderRadius: '5px',
   cursor: 'pointer',
 };
 
-const smallEditButtonStyle: React.CSSProperties = {
-    padding: '3px 6px',      // Smaller padding
-    marginLeft: '10px',      // Space between the text and the button
-    backgroundColor: '#fff', // White background
-    color: '#000',           // Black text
-    border: '1px solid #000', // Black border
-    borderRadius: '4px',     // Small border radius
-    fontSize: '12px',        // Smaller font size
-    cursor: 'pointer',
-  };
-  
+const generateButtonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  backgroundColor: '#4CAF50',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '20px',
+  fontSize: '16px',
+  cursor: 'pointer',
+  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+};
+
+
+// modal style
+
+const modalTitleStyle: React.CSSProperties = {
+  fontSize: '18px',
+  marginBottom: '15px',
+};
+
+const modalInputWrapperStyle: React.CSSProperties = {
+  marginBottom: '10px',
+};
+
+
+const smallNumberInputStyle: React.CSSProperties = {
+  width: '60px', // Smaller width for the number input
+  padding: '5px',
+  fontSize: '14px',
+  textAlign: 'center',
+  borderRadius: '5px',
+  border: '1px solid #ccc',
+};
+
+const modalLabelStyle: React.CSSProperties = {
+  fontSize: '14px',
+  marginRight: '10px',
+};
+
+const smallModalContentStyle: React.CSSProperties = {
+  backgroundColor: '#fff',
+  padding: '20px',
+  borderRadius: '8px',
+  width: '300px',
+  textAlign: 'center',
+  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+};
+
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+};
+
+const modalButtonContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginTop: '20px',
+};
+
+const iconButtonStyle: React.CSSProperties = {
+  padding: '10px',
+  backgroundColor: '#fff',
+  color: '#000',
+  border: '1px solid #ccc',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '16px',
+};
+
+
+const headerStyle: React.CSSProperties = {
+  fontSize: '24px',
+  fontWeight: 'bold',
+  marginBottom: '20px',
+  textAlign: 'center',
+};
 
 export default SyllabusPreviewFrame;

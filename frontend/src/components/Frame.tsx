@@ -6,6 +6,7 @@ import UploadFrame from './UploadFrame';
 import ContextualFrame from './ContextualFrame';
 import PedagogicalFrame from './PedagogicalFrame';
 import SyllabusPreviewFrame from './SyllabusPreviewFrame';
+import CoursePlanFrame from './CoursePlanFrame';
 
 
 
@@ -22,6 +23,7 @@ const Frame: React.FC = () => {
   const [pedagogicalFramework] = useState<string>('Revised Bloom Taxonomy');
   const [selectedLevels] = useState<string[]>([]);
   const [syllabus, setSyllabus] = useState<string>('');
+  const [coursePlan, setCoursePlan] = useState<string>('');
   
   // Handle file or URL upload completion
   const handleUploadComplete = (
@@ -57,6 +59,12 @@ const Frame: React.FC = () => {
   const handleSyllabusPreviewComplete = (syllabus: string) => {
     setSyllabus(syllabus);
     setActiveStep(4); // Move to the final step to preview the syllabus
+  };
+
+   // Handle final course plan preview
+   const handleCoursePlan = (plan: string) => {
+    setCoursePlan(plan);
+    setActiveStep(5); // Move to the final step to preview the course plan
   };
 
   const handleStepClick = (step: number) => {
@@ -98,11 +106,19 @@ const Frame: React.FC = () => {
           />
           <Step
             stepNumber={4}
-            title="Preview & Export"
+            title="Syllabus Preview & Export"
             description="Preview and export your syllabus."
             isActive={activeStep === 4}
             isLastStep={true}
             onClick={() => handleStepClick(4)}
+          />
+           <Step
+            stepNumber={5}
+            title="Course Plan Generation"
+            description="Preview and export your Course Plan."
+            isActive={activeStep === 5}
+            isLastStep={true}
+            onClick={() => handleStepClick(5)}
           />
         </div>
       </div>
@@ -134,8 +150,18 @@ const Frame: React.FC = () => {
       {activeStep === 4 && (
         <SyllabusPreviewFrame
           syllabus = {syllabus}
+          analysis = {analysis}
           onBack={() => setActiveStep(3)}
+          onNext={handleCoursePlan}
         />
+      )}
+       {activeStep === 5&& (
+        <CoursePlanFrame
+          coursePlan={coursePlan}
+          //analysis={analysis}
+          onBack={() => setActiveStep(4)} onGenerate={function (plan: string): void {
+            throw new Error('Function not implemented.');
+          } }       />
       )}
     </div>
   );
