@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import infoImage from '../assets/lucide_info.svg';
 import analyseIcon from '../assets/pepicons-pop_reload.svg';
+import { franc } from 'franc-min'; // Assuming you are using franc-min for language detection
+import { toast } from 'react-toastify';
 
 interface UploadFrameProps {
   onComplete: (analysis: string, topics: string[], file: File | null, url: string) => void;
@@ -53,15 +55,16 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
     }
   };
 
+
   const handleAnalyze = async () => {
     if (!isAnalyzable) return;
-
+  
     setIsLoading(true); // Start the loading spinner
-
+  
     try {
       const bodyString = JSON.stringify({ material: url });
       const analyzeUrl = `${baseURL}/analyze-material`;
-
+  
       const response = await fetch(analyzeUrl, {
         method: 'POST',
         headers: {
@@ -69,24 +72,54 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
         },
         body: bodyString,
       });
-
+  
       if (response.ok) {
         const result = await response.json();
-        const generatedTopics = result.MainTopics.map((topicObj: { Topic: string }) => topicObj.Topic);
-
-        // Set topics and mark all topics as selected by default
-        setTopics(generatedTopics);
-        setSelectedTopics(generatedTopics); // Select all topics by default
-        onComplete(result, generatedTopics, null, url);
+  
+        // Extract topics
+        const mainTopics = result.MainTopics;
+  
+        // Extract all topics as strings
+        const allTopics = mainTopics.map((topicObj: { Topic: string }) => topicObj.Topic);
+  
+        // Detect the language of the topics using franc
+        const detectedLang = franc(allTopics.join(' '));
+  
+        let filteredTopics: string[] = [];
+  
+        // Split topics into two halves
+        const halfIndex = Math.floor(allTopics.length / 2);
+        const firstHalf = allTopics.slice(0, halfIndex);
+        const secondHalf = allTopics.slice(halfIndex);
+  
+        if (detectedLang === 'ita') {
+          // If detected language is Italian, return the second half
+          filteredTopics = secondHalf;
+        } else {
+          // Otherwise, return the first half
+          filteredTopics = firstHalf;
+        }
+  
+        // Set topics and mark all filtered topics as selected by default
+        setTopics(filteredTopics);
+        setSelectedTopics(filteredTopics);
+  
+        // Pass filtered topics to the next step
+        onComplete(result, filteredTopics, null, url);
       } else {
-        console.error('Material analysis failed:', response.statusText);
+        // API responded, but something went wrong
+        toast.error(`Material analysis failed: ${response.statusText}`);
       }
     } catch (error) {
+      // Error occurred while calling the API
+      toast.error('Error analyzing material. Please try again.');
       console.error('Error analyzing material:', error);
     } finally {
       setIsLoading(false); // Stop the loading spinner
     }
   };
+
+  
 
   const handleTopicChange = (topic: string) => {
     if (selectedTopics.includes(topic)) {

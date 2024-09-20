@@ -47,6 +47,7 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
 
     setIsLoading(true);
 
+
     // generate the syllabus
     try {
       const isProduction = process.env.NODE_ENV === 'production';
@@ -55,13 +56,17 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
 
       const body = JSON.stringify(analysis);
       const transformed = transformInput(body, selectedLevels);
+      // here filter only topics in the selected language
+      const checkedAnalysis = processTopics(JSON.stringify(transformed));
+
+    
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(transformed),
+        body: JSON.stringify(checkedAnalysis),
       });
 
       if (!response.ok) {
@@ -77,12 +82,48 @@ const PedagogicalFrame: React.FC<PedagogicalFrameProps> = ({
     } finally {
       setIsLoading(false);
     }
+      
   };
 
   const handleNextClick = () => {
     if (generatedSyllabus) {
       onNext(generatedSyllabus); // Pass the generated syllabus to the next component
     }
+  };
+
+
+  const processTopics = (inputJson: string) => {
+    // Parse the input JSON
+    const data = JSON.parse(inputJson);
+    
+    // Get the language and MainTopics from the nested 'Analysis' object
+    const { Language, MainTopics } = data.Analysis;
+
+    
+    // Determine the midpoint of the MainTopics array
+    const halfIndex = Math.floor(MainTopics.length / 2);
+  
+    let filteredTopics;
+  
+    // Check the language and select the appropriate half of the topics
+    if (Language === 'Italian') {
+      // Take the second half of the array for Italian
+      filteredTopics = MainTopics.slice(halfIndex);
+    } else {
+      // For any other language (assume English), take the first half
+      filteredTopics = MainTopics.slice(0, halfIndex);
+    }
+  
+    // Create a new JSON with the filtered topics
+    const newJson = {
+      ...data,
+      Analysis: {
+        ...data.Analysis,
+        MainTopics: filteredTopics,
+      },
+    };
+  
+    return newJson;
   };
 
   function transformInput(inputString: string, selectedBloomLevels: string[]) {
