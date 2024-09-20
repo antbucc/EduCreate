@@ -148,6 +148,30 @@ app.post('/generateSyllabus', async (req, res) => {
   }
 });
 
+// API route to generate course plan
+app.post('/generateCoursePlan', async (req, res) => {
+  const bodyReceived = req.body; 
+
+  const endpoint = '/CoursePlanner/planCourse'; // Endpoint for course plan generation
+
+  const bodyFinal = JSON.stringify(bodyReceived);
+
+  console.log("BODY FINAL: "+bodyFinal);
+  const headers = {
+    'ApiKey': API_KEY, // Your API Key for the external service
+    'SetupModel': SETUP_MODEL_MINI, // Configuration for the external service
+  };
+
+  try {
+    const response = await apiClient_SK.post(endpoint, bodyFinal, { headers }); // Post to external API
+    return res.status(200).json(response.data); // Return the course plan data
+  } catch (error) {
+    console.error('Error generating course plan:', error.response ? error.response.data : error.message);
+    return res.status(500).send('Error generating course plan.'); // Return error message if API fails
+  }
+});
+
+
 // Start the Express server
 const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => {
