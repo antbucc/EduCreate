@@ -96,8 +96,8 @@ const UploadFrame: React.FC<UploadFrameProps> = ({ onComplete, pdfFile: initialP
           // If detected language is Italian, return the second half
           filteredTopics = secondHalf;
         } else {
-          // Otherwise, return the first half
-          filteredTopics = firstHalf;
+          // Otherwise, return all topics
+          filteredTopics = allTopics;
         }
   
         // Set topics and mark all filtered topics as selected by default
